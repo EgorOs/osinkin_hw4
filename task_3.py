@@ -61,15 +61,18 @@ def count_points(A, B, C):
             if is_int(equal_sides[0]):
                 # oriented like |__
                 pts = 3
+                pts_on_diag = 2
                 for i in range(int(equal_sides[0])-1):
                     pts += 3+i
-                return pts
+                    pts_on_diag += 1
+                return pts, pts_on_diag
             else:
                 # oriented like  .^.
                 rec = Rectangle(A, B, C)
                 h = min(rec.dimensions)
                 pts = (h+1)**2
-                return pts
+                pts_on_diag = h * 2 + 1
+                return pts, pts_on_diag
         else:
             # oriented like |__ with unequal sides
             rec = Rectangle(A, B, C)
@@ -89,7 +92,7 @@ def count_points(A, B, C):
             else:
                 pts_on_diag = 2
             pts = (rec.pts - pts_on_diag)//2 + pts_on_diag
-            return pts
+            return pts, pts_on_diag
 
     def get_closest_point(point, *pts):
         min_dst = None
@@ -113,6 +116,9 @@ def count_points(A, B, C):
         for pt in pts:
             rect = Rectangle(pt1, pt2, pt)
             size = rect.pts
+            d1, d2 = rect.dimensions
+            if d1 * d2 == 0:
+                return None
             if not min_size:
                 min_size = size
                 best_pt = pt
@@ -123,10 +129,9 @@ def count_points(A, B, C):
                 best_pt = pt
         return pt1, pt2, best_pt
 
-    def pts_in_right_triangle(A, B, C):
+    def pts_in_right_triangle(A, B, C): # Remove that later
         # CHECK THAT
         rect = Rectangle(A, B, C)
-        print(rect.pts)
         return rect.pts//2 + 1
 
     class Rectangle:
@@ -137,28 +142,47 @@ def count_points(A, B, C):
             self.pts = (x_max-x_min+1)*(y_max-y_min+1)
             self.dimensions = (x_max-x_min, y_max-y_min)
             self.main_diag = ((x_min, y_min), (x_max, y_max))
-            # insert triagle into smallest rectangle
+            # insert triangle into smallest rectangle
         def find_external_triangles(self, A, B, C):
             lst = [A, B, C]
             paired = [(V1, V2) for V1 in lst for V2 in lst[::-1][:2] if V1!=V2][:3]
             ext = []
             for pair in paired:
                 V1, V2 = pair
-
-                ext.append(get_smallest_triangle(V1, V2, self.vertices))
+                triangle = get_smallest_triangle(V1, V2, self.vertices)
+                if triangle:
+                    ext.append(triangle)
             return ext
 
     rec = Rectangle(A,B,C)
-    print('---',calc_points(A,B,C))
-    print(pts_in_right_triangle(A,B,C))
-    print(rec.find_external_triangles(A,B,C))
+    # print('---',calc_points(A,B,C))
+    # print(pts_in_right_triangle(A,B,C))
+    #print(rec.find_external_triangles(A,B,C))
     #print('+++', get_diagonal(A,B,C))
     # print(get_smallest_triangle(A, B, [(1,2),(10,1)]))
-    return is_right_triangle(A, B, C)
+
+
+
+    if is_right_triangle(A,B,C):
+        print('triangle')
+        return calc_points(A,B,C)
+    else:
+        rec = Rectangle(A,B,C)
+        print('Rec_pts', rec.pts)
+        pts_in_target = rec.pts
+        external = rec.find_external_triangles(A, B, C)
+        for triangle in external:
+            print(triangle)
+            A, B, C = triangle
+            pts, diag_pts = count_points(A,B,C)
+            print('----- tr_pts',pts)
+            pts_in_target = pts_in_target - pts + diag_pts
+        return pts_in_target, 2
+
 
 
 A = (0, 0)
-B = (4, 0)
-C = (0, 8)
-
+B = (1, 2)
+C = (3, 3)
+print('----')
 print(count_points(A, B, C))

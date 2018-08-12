@@ -5,7 +5,7 @@ from time import time
 def count_points(A, B, C):
 
     def is_int(n):
-        return True if n//1==n else False
+        return True if n//1 == n else False
 
     def norm_2(pt1, pt2):
         """
@@ -27,32 +27,28 @@ def count_points(A, B, C):
         else:
             return False
 
-    def get_vectors(A,B,C):
+    def get_vectors(A, B, C):
         return Vector(A, B), Vector(B, C), Vector(C, A)
 
     def is_right_triangle(A, B, C):
+        """Check if two sides of triangle are orthogonal"""
         AB, BC, CA = get_vectors(A, B, C)
         lst = (AB,BC,CA)
-        paired_coords = [ (V1.coord, V2.coord) for V1 in lst for V2 in lst[::-1][:2] if V1.coord!=V2.coord][:3]
+        paired_coords = [ (V1.coord, V2.coord) for V1 in lst for V2
+                          in lst[::-1][:2] if V1.coord!=V2.coord][:3]
         is_right = [True for pair in paired_coords if is_perpendicular(*pair)]
         return True if is_right else False
 
-    def is_simple_triangle(A, B, C):
-        """
-        The triangle is considered simple
-        if one of its sides has length of 1
-        """
-        AB, BC, CA = get_vectors(A, B, C)
-        lst = (AB,BC,CA)
-        is_simple = [True for V in lst if V.len == 1]
-        return True if is_simple else False
-
     def get_equal_sides(A, B, C):
+        """
+        If triangle, formed by given vertices equal sides return equal sides
+        """
         sides = get_vectors(A, B, C)
-        equal = [s1.len for s1 in sides for s2 in sides if s1.len==s2.len and s1.id!=s2.id]
+        equal = [s1.len for s1 in sides for s2 in sides
+                 if s1.len==s2.len and s1.id!=s2.id]
         return equal
 
-    def calc_points(A, B, C):
+    def calc_pts_right_triangle(A, B, C):
         """
         Calculates number of points in right triangle
         """
@@ -94,22 +90,12 @@ def count_points(A, B, C):
             pts = (rec.pts - pts_on_diag)//2 + pts_on_diag
             return pts, pts_on_diag
 
-    def get_closest_point(point, *pts):
-        min_dst = None
-        closest = None
-        for pt in pts[0]:
-            dst = norm_2(point, pt)
-            if not min_dst:
-                min_dst = dst
-                closest = pt
-            elif min_dst <= dst:
-                pass
-            else:
-                min_dst = dst
-                closest = pt
-        return closest
-
-    def get_smallest_triangle(pt1, pt2, *pts):
+    def get_smaller_triangle(pt1, pt2, *pts):
+        """
+        Given 2 vertices of triangle and vertices of rectangle (*pts)
+        returns the smallest triangle made from 2 input vertices and
+        one vertex from *pts
+        """
         min_size = None
         best_pt = None
         pts = set(pts[0]) - {pt1} - {pt2}
@@ -129,11 +115,6 @@ def count_points(A, B, C):
                 best_pt = pt
         return pt1, pt2, best_pt
 
-    def pts_in_right_triangle(A, B, C): # Remove that later
-        # CHECK THAT
-        rect = Rectangle(A, B, C)
-        return rect.pts//2 + 1
-
     class Rectangle:
         def __init__(self, A, B, C):
             x_min, x, x_max = sorted([A[0], B[0], C[0]])
@@ -142,47 +123,68 @@ def count_points(A, B, C):
             self.pts = (x_max-x_min+1)*(y_max-y_min+1)
             self.dimensions = (x_max-x_min, y_max-y_min)
             self.main_diag = ((x_min, y_min), (x_max, y_max))
-            # insert triangle into smallest rectangle
+            self.sides = {((x_min, y_min), (x_min, y_max)),
+                         ((x_min, y_max), (x_max, y_max)),
+                         ((x_max, y_max), (x_max, y_min)),
+                         ((x_max, y_min), (x_min, y_min)),
+                         }
+            self.external_triangles = []
+
         def find_external_triangles(self, A, B, C):
+            """
+            Returns two elements:
+            1) list of coordinates of triangles, which left if target triangle
+            is cut out from rectangle
+            2) integer number of overlaps (times, when one vertex of rectangle
+            used in multiple external triangles)
+            """
             lst = [A, B, C]
             paired = [(V1, V2) for V1 in lst for V2 in lst[::-1][:2] if V1!=V2][:3]
-            ext = []
+            # Overlaps added if one vertice of rectangle is used in
+            # multiple triangles
+            overlaps = 0
+            extra_vertices = set()
             for pair in paired:
                 V1, V2 = pair
-                triangle = get_smallest_triangle(V1, V2, self.vertices)
-                if triangle:
-                    ext.append(triangle)
-            return ext
+                if (V1, V2) in self.sides or (V2, V1) in self.sides:
+                    # Don't create extra triangle if pair of vertices is
+                    # already a side of rectangle
+                    pass
+                else:
+                    triangle = get_smaller_triangle(V1, V2, self.vertices)
+                    # get_smaller_triangle returns None if it could not create
+                    # new triangle with given set of vertices
+                    if triangle:
+                        new_vertice = triangle[2]
+                        if new_vertice in extra_vertices:
+                            overlaps += 1
+                        else: 
+                            extra_vertices.add(new_vertice)
+                        self.external_triangles.append(triangle)
+            return self.external_triangles, overlaps
 
-    rec = Rectangle(A,B,C)
-    # print('---',calc_points(A,B,C))
-    # print(pts_in_right_triangle(A,B,C))
-    #print(rec.find_external_triangles(A,B,C))
-    #print('+++', get_diagonal(A,B,C))
-    # print(get_smallest_triangle(A, B, [(1,2),(10,1)]))
+    def recoursive_calc(A, B, C):
+        """
+        Recursively represent triangles as rectangle minus number of external
+        triangles; if triangles are right, calculate points and subtract them
+        from rectangle
+        """
+        if is_right_triangle(A, B, C):
+            return calc_pts_right_triangle(A, B, C)
+        else:
+            rec = Rectangle(A, B, C)
+            pts_in_target = rec.pts
+            external, overlaps = rec.find_external_triangles(A, B, C)
+            for triangle in rec.external_triangles:
+                A, B, C = triangle
+                pts, diag_pts = recoursive_calc(A, B, C)
+                pts_in_target = pts_in_target - pts + diag_pts
+            pts_in_target += overlaps
+            return pts_in_target, 2
 
+    return recoursive_calc(A, B, C)[0]
 
-
-    if is_right_triangle(A,B,C):
-        print('triangle')
-        return calc_points(A,B,C)
-    else:
-        rec = Rectangle(A,B,C)
-        print('Rec_pts', rec.pts)
-        pts_in_target = rec.pts
-        external = rec.find_external_triangles(A, B, C)
-        for triangle in external:
-            print(triangle)
-            A, B, C = triangle
-            pts, diag_pts = count_points(A,B,C)
-            print('----- tr_pts',pts)
-            pts_in_target = pts_in_target - pts + diag_pts
-        return pts_in_target, 2
-
-
-
-A = (0, 0)
-B = (1, 2)
-C = (3, 3)
-print('----')
-print(count_points(A, B, C))
+# A = (0, 0)
+# B = (1, 2)
+# C = (3, 3)
+# print(count_points(A, B, C))

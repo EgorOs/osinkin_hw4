@@ -1,3 +1,11 @@
+# **Task 3**
+#### **Description:**
+Given 3 vertices with integer coordinates for example (0,0), (1,2), (3, 3),
+find the number of integer points inside triangle formed by vertices.
+#### **Solution:**
+##### Notes
+1) We can easily calculate the number of points in rectangle as
+ *n = (a + 1) * (b + 1)*, where *a* and *b* are sides of rectangle.
 2) Calculation of pts in right triangle is pretty easy aswell, but there 
 are three diffetent cases depending on orientation and equalty of sides,
 further details about these cases can be found in body of

@@ -25,14 +25,14 @@ def mysqrt(x, decimal=0.1, precision=0.001):
     if x < 0: raise ValueError('{} is not positive number'.format(x))
     if x == 0: return 0
     if x == 1: return 1
-    
+
     decimal_str = str(decimal)
     if 'e' in decimal_str:
         # for representation like 1e-11
         decimal = int(decimal_str.split('-')[1])
     else:
         decimal = len(decimal_str.split('.')[1])
-    return round(next_guess(x, x // 2, precision), ndigits=decimal)
+    return round(next_guess(x, x / 2, precision), ndigits=decimal)
 
 
-# print(mysqrt(5, 0.01))
+# print(mysqrt(4/1000, 0.0001))

@@ -48,6 +48,23 @@ def count_points(A, B, C):
                  if s1.len==s2.len and s1.id!=s2.id]
         return equal
 
+    def is_diag(pt1, pt2):
+        x1, y1 = pt1
+        x2, y2 = pt2
+        x, y = abs(x2 - x1), abs(y2 - y1)
+        return True if x and y else False
+
+    def get_pts_on_diag(pt1, pt2):
+        pts_on_diag = 0
+        x1, y1 = pt1
+        x2, y2 = pt2
+        x, y = abs(x2 - x1), abs(y2 - y1)
+        step = max(x,y)/min(x,y)
+        for i in range(min(x,y)+1):
+            if i*step%1==0:
+                pts_on_diag+=1
+        return pts_on_diag
+
     def calc_pts_right_triangle(A, B, C):
         """
         Calculates number of points in right triangle
@@ -74,19 +91,8 @@ def count_points(A, B, C):
             rec = Rectangle(A, B, C)
             big_side = max(rec.dimensions)
             small_side = min(rec.dimensions)
-            diag = rec.main_diag
-            x_min, y_min = diag[0]
-            x_max, y_max = diag[1]
-            pts_on_diag = 0
-            if small_side % 2 == 0 and big_side % 2 == 0:
-                # y = k * x + b
-                k = y_max/x_max
-                for x in range(x_min, x_max):
-                    if is_int(k*x):
-                        pts_on_diag += 1
-                pts_on_diag += 1
-            else:
-                pts_on_diag = 2
+            pt1, pt2 = rec.main_diag
+            pts_on_diag = get_pts_on_diag(pt1,pt2)
             pts = (rec.pts - pts_on_diag)//2 + pts_on_diag
             return pts, pts_on_diag
 
@@ -94,7 +100,7 @@ def count_points(A, B, C):
         """
         Given 2 vertices of triangle and vertices of rectangle (*pts)
         returns the smallest triangle made from 2 input vertices and
-        one vertex from *pts
+        one vertex from *pts and the number of potential overlaps
         """
         min_size = None
         best_pt = None
@@ -113,7 +119,12 @@ def count_points(A, B, C):
             else:
                 min_size = size
                 best_pt = pt
-        return pt1, pt2, best_pt
+        potential_overlaps = 1
+        if norm_2(pt1, best_pt) < norm_2(pt2, best_pt) and is_diag(pt1, best_pt):
+            potential_overlaps = get_pts_on_diag(pt1, best_pt) - 1
+        elif norm_2(pt1, best_pt) > norm_2(pt2, best_pt) and is_diag(pt2, best_pt):
+            potential_overlaps = get_pts_on_diag(pt2, best_pt) - 1
+        return pt1, pt2, best_pt, potential_overlaps
 
     class Rectangle:
         def __init__(self, A, B, C):
@@ -151,14 +162,18 @@ def count_points(A, B, C):
                     # already a side of rectangle
                     pass
                 else:
-                    triangle = get_smaller_triangle(V1, V2, self.vertices)
+                    *triangle, potential_overlaps = get_smaller_triangle(V1, V2, self.vertices)
                     # get_smaller_triangle returns None if it could not create
                     # new triangle with given set of vertices
                     if triangle:
                         new_vertice = triangle[2]
                         if new_vertice in extra_vertices:
-                            overlaps += 1
-                        else: 
+                            if potential_overlaps > overlaps:
+                                # print('{} and {}'.format(potential_overlaps,overlaps))
+                                overlaps = potential_overlaps
+                            if self.dimensions[0] == self.dimensions[1]:
+                                overlaps = 1
+                        else:
                             extra_vertices.add(new_vertice)
                         self.external_triangles.append(triangle)
             return self.external_triangles, overlaps
@@ -178,13 +193,32 @@ def count_points(A, B, C):
             for triangle in rec.external_triangles:
                 A, B, C = triangle
                 pts, diag_pts = recoursive_calc(A, B, C)
+                old = pts_in_target
                 pts_in_target = pts_in_target - pts + diag_pts
+                # print('{} = {} - {} + {}'.format(pts_in_target, old, pts, diag_pts))
             pts_in_target += overlaps
-            return pts_in_target, 2
+            return pts_in_target, diag_pts
 
     return recoursive_calc(A, B, C)[0]
 
-# A = (0, 0)
-# B = (1, 2)
-# C = (3, 3)
+assert count_points((0,0),(1,2),(3, 3)) == 5
+assert count_points((0,1),(1,3),(-1,-4)) == 4
+assert count_points((0,0),(2,2),(3, 3)) == 3
+assert count_points((2,3),(14,6),(5,9)) == 37
+assert count_points((-2,-3),(-14,-6),(-5,-9)) == 37
+assert count_points((4,-1),(0,-5),(6, -5)) == 19
+assert count_points((4,-1),(6,3),(6, -5)) == 15
+assert count_points((0,3),(6,3),(0, -5)) == 33
+assert count_points((4,-1),(6,3),(0, -5)) == 9
+assert count_points((-2,-5),(-1,1),(5,2)) == 23
+assert count_points((-2,-5),(0,0),(-2,2)) == 13
+assert count_points((-2,2),(0,0),(5,2)) == 13
+assert count_points((-2,-5),(5,-5),(5,2)) == 36
+assert count_points((-3,-7),(0,0),(7,3)) == 27
+
+# A, B, C = ((0,0),(1,2),(3, 3))
+# A, B, C = ((0,0),(2,2),(3, 3))
+# A, B, C = ((0,1),(1,3),(-1,-4))
+# A, B, C = ((-3,-7),(0,0),(7,3)) 
+
 # print(count_points(A, B, C))

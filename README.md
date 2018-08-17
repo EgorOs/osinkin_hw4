@@ -23,11 +23,10 @@ several right triangles. So we sequentially wrapping triangles with rectangles.
 2) Else wrap **target triangle** with rectangle. Try to represent rectangle
 as sum of **target triangle** and 1-3 **external triangles**. 
 In this case:  
-*T_tr = R - T_ext + D + O*, where  
+*T_tr = R - T_ext + O*, where  
 *T_tr* - points in target triangle  
 *R* - points in rectangle  
 *T_ext* - points in external triangles (1-3)  
-*D* - points on diagonals of external triangles (1-3)  
 *O* - number of overlaps  
 For triangle in **external triangles** go to step (1) 
 if triangle is not right proceed to step (2).
